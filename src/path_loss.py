@@ -30,6 +30,15 @@ class PathLoss(metaclass=ABCMeta):
     def shadow_fading(cls, std):
         return np.random.normal(loc=0, scale=std)
 
+    @classmethod
+    def line_of_sight_probability(cls, distance_m):
+        if distance_m <= 1.2:
+            return 1
+        elif distance_m < 6.5:
+            return math.exp(-(distance_m - 1.2) / 4.7)
+        else:
+            return math.exp(-(distance_m - 6.5) / 32.6) * 0.32
+
     @abstractmethod
     def in_dB(cls, frequency_Hz, distance_m):
         pass
@@ -182,4 +191,46 @@ class PathLossInHShoppingMallsNLOSDual(PathLossCloseInFreeSpaceFrequencyDependen
                 1 + self.slope_2 * (frequency_Hz / self.reference_freq_Hz - 1)
             ) * math.log10(
                 distance_m / self.distance_split
+            )
+
+
+class PathLossInHShoppingMalls(PathLoss):
+    def __init__(self, dual_slope=True):
+        self.los_model = PathLossInHShoppingMallsLOS()
+        self.nlos_model = (
+            PathLossInHShoppingMallsNLOSDual()
+            if dual_slope
+            else PathLossInHShoppingMallsNLOSSingle()
+        )
+
+    def in_dB(self, frequency_Hz, distance_m):
+        los_proba = PathLossInHShoppingMalls.line_of_sight_probability(distance_m)
+        if np.random.uniform(0, 1) <= los_proba:
+            return self.los_model.in_dB(
+                frequency_Hz=frequency_Hz, distance_m=distance_m
+            )
+        else:
+            return self.nlos_model.in_dB(
+                frequency_Hz=frequency_Hz, distance_m=distance_m
+            )
+
+
+class PathLossInHIndoorOffice(PathLoss):
+    def __init__(self, dual_slope=True):
+        self.los_model = PathLossInHIndoorOfficeLOS()
+        self.nlos_model = (
+            PathLossInHIndoorOfficeNLOSDual()
+            if dual_slope
+            else PathLossInHIndoorOfficeNLOSSingle()
+        )
+
+    def in_dB(self, frequency_Hz, distance_m):
+        los_proba = PathLossInHShoppingMalls.line_of_sight_probability(distance_m)
+        if np.random.uniform(0, 1) <= los_proba:
+            return self.los_model.in_dB(
+                frequency_Hz=frequency_Hz, distance_m=distance_m
+            )
+        else:
+            return self.nlos_model.in_dB(
+                frequency_Hz=frequency_Hz, distance_m=distance_m
             )
