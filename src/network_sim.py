@@ -30,6 +30,8 @@ class NetworkSimulator(object):
         self.bandwidth_Hz = bandwidth_MHz * 1e6
         self.RU_bandwidth_Hz = RU_bandwidth_KHz * 1e3
 
+        self.noise_mW = (10 ** (0 - 174 / 10)) * self.RU_bandwidth_Hz
+
         self.path_loss_model = PathLossInHShoppingMalls()
         self.gain_mat_dBm = None
         self.gain_mat_mW = None
@@ -76,6 +78,7 @@ class NetworkSimulator(object):
         self.y_Rx = np.append(self.y_Rx_known, self.y_Rx_unknown)
 
         self.Tx_of = self._generate_Rx_Tx_mapping()
+        self.Rx_of = self._generate_Tx_Rx_mapping()
         self.update_gain_matrix()
 
     def plot_network(self, figsize=(7, 7)):
@@ -194,6 +197,12 @@ class NetworkSimulator(object):
 
         return Tx_of
 
+    def _generate_Tx_Rx_mapping(self):
+        Rx_of = []
+        for k in range(len(self.x_Tx)):
+            Rx_of.append(np.where(np.array(self.Tx_of) == k)[0])
+        return Rx_of
+
     @classmethod
     def _uniform_distribution_in_circle(cls, center_x, center_y, radius, n):
         dist = np.sqrt(np.random.uniform(0, 1, n)) * radius
@@ -206,23 +215,30 @@ class NetworkSimulator(object):
     def get_Tx_uni_index(self, Rx_uni_index):
         return Rx_uni_index // len(self.x_Tx)
 
-    def _noise_mW(self, dB):
-        return (10 ** ((0 - 174) / 10)) * self.RU_bandwidth_Hz
-
-    def weighted_sum_rate_Gbps(self, Tx_powers, Rx_weights):
+    def weighted_sum_rate_Gbps(self, Rx_powers_mW, Rx_weights):
         """Sum rate on 1 RU"""
 
         sinr_list = []
         rate_list = []
-        for j in range(len(self.x_Rx)):
-            k = self.Tx_of[j]
-            signal = Tx_powers[k] * self.gain_mat_mW[k][j]
-            interference = np.array(Tx_powers).dot(self.gain_mat_mW[:, j]) - signal
-            sinr_j = signal / (interference + self._noise_mW(dB=3))
+        for i in range(len(self.x_Rx)):
+            k = self.Tx_of[i]
+            signal = (
+                np.sum(np.take(Rx_powers_mW, self.Rx_of[k])) * self.gain_mat_mW[k][i]
+            )
+            interference = (
+                np.array(
+                    [
+                        np.sum(np.take(Rx_powers_mW, self.Rx_of[j]))
+                        for j in range(len(self.x_Tx))
+                    ]
+                ).dot(self.gain_mat_mW[:, i])
+                - signal
+            )
+            sinr_j = signal / (interference + self.noise_mW)
             sinr_list.append(sinr_j)
 
-        for j in range(len(self.x_Rx)):
-            rate_list.append(math.log(1 + sinr_list[j]))
+        for i in range(len(self.x_Rx)):
+            rate_list.append(math.log(1 + sinr_list[i]))
 
         spectral_efficiency = 1.4426950408889 * 20 / 1e9  # Gnats / Hz
         scaler = self.bandwidth_Hz * spectral_efficiency
