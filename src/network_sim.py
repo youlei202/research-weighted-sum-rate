@@ -16,7 +16,9 @@ class NetworkSimulator(object):
         num_Rx_per_Tx_known,
         num_Tx_unknown,
         num_Rx_per_Tx_unknown,
-        frequency_Hz=50 * 1e9,
+        frequency_GHz=60,
+        bandwidth_MHz=80,
+        RU_bandwidth_KHz=180,
     ):
         self.Tx_radius = Tx_radius
         self.Rx_radius = Rx_radius
@@ -24,10 +26,13 @@ class NetworkSimulator(object):
         self.num_Rx_per_Tx_known = num_Rx_per_Tx_known
         self.num_Tx_unknown = num_Tx_unknown
         self.num_Rx_per_Tx_unknown = num_Rx_per_Tx_unknown
-        self.frequency_Hz = frequency_Hz
+        self.frequency_Hz = frequency_GHz * 1e9
+        self.bandwidth_Hz = bandwidth_MHz * 1e6
+        self.RU_bandwidth_Hz = RU_bandwidth_KHz * 1e3
 
         self.path_loss_model = PathLossInHShoppingMalls()
         self.gain_mat_dBm = None
+        self.gain_mat_mW = None
 
         # Generate x,y positions of known Tx and Rx
         (
@@ -70,6 +75,7 @@ class NetworkSimulator(object):
         self.x_Rx = np.append(self.x_Rx_known, self.x_Rx_unknown)
         self.y_Rx = np.append(self.y_Rx_known, self.y_Rx_unknown)
 
+        self.Tx_of = self._generate_Rx_Tx_mapping()
         self.update_gain_matrix()
 
     def plot_network(self, figsize=(7, 7)):
@@ -151,6 +157,7 @@ class NetworkSimulator(object):
                 for k in range(len(self.x_Tx))
             ]
         )
+        self.gain_mat_mW = np.vectorize(lambda x: 10 ** (x / 10))(self.gain_mat_dBm)
 
     def plot_gain_mat(self):
         plt.matshow(self.gain_mat_dBm)
@@ -167,6 +174,26 @@ class NetworkSimulator(object):
             frequency_Hz=self.frequency_Hz, distance_m=distance_m
         )
 
+    def _generate_Rx_Tx_mapping(self):
+        # Mapping each Rx to its corresponding Tx
+        Tx_of = []
+        k = 0
+        while k < self.num_Tx_known:
+            j = 0
+            while j < self.num_Rx_per_Tx_known:
+                Tx_of.append(k)
+                j += 1
+            k += 1
+
+        while k < self.num_Tx_known + self.num_Tx_unknown:
+            j = 0
+            while j < self.num_Rx_per_Tx_unknown:
+                Tx_of.append(k)
+                j += 1
+            k += 1
+
+        return Tx_of
+
     @classmethod
     def _uniform_distribution_in_circle(cls, center_x, center_y, radius, n):
         dist = np.sqrt(np.random.uniform(0, 1, n)) * radius
@@ -175,3 +202,28 @@ class NetworkSimulator(object):
         x = dist * np.cos(angle) + center_x
         y = dist * np.sin(angle) + center_y
         return x, y
+
+    def get_Tx_uni_index(self, Rx_uni_index):
+        return Rx_uni_index // len(self.x_Tx)
+
+    def _noise_mW(self, dB):
+        return (10 ** ((0 - 174) / 10)) * self.RU_bandwidth_Hz
+
+    def weighted_sum_rate_Gbps(self, Tx_powers, Rx_weights):
+        """Sum rate on 1 RU"""
+
+        sinr_list = []
+        rate_list = []
+        for j in range(len(self.x_Rx)):
+            k = self.Tx_of[j]
+            signal = Tx_powers[k] * self.gain_mat_mW[k][j]
+            interference = np.array(Tx_powers).dot(self.gain_mat_mW[:, j]) - signal
+            sinr_j = signal / (interference + self._noise_mW(dB=3))
+            sinr_list.append(sinr_j)
+
+        for j in range(len(self.x_Rx)):
+            rate_list.append(math.log(1 + sinr_list[j]))
+
+        spectral_efficiency = 1.4426950408889 * 20 / 1e9  # Gnats / Hz
+        scaler = self.bandwidth_Hz * spectral_efficiency
+        return np.array(Rx_weights).dot(np.array(rate_list)) * scaler
