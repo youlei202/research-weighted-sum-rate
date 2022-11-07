@@ -227,3 +227,22 @@ class NetworkSimulator(object):
         spectral_efficiency = 1.4426950408889 * 20 / 1e9  # Gnats / Hz
         scaler = self.bandwidth_Hz * spectral_efficiency
         return np.array(Rx_weights).dot(np.array(rate_list)) * scaler
+
+    def get_gain_mat(self, part="full", unit="mW"):
+
+        if unit == "dBm":
+            gain_mat = self.gain_mat_dBm.copy()
+        else:
+            gain_mat = self.gain_mat_mW.copy()
+
+        if part not in ["known", "unknown"]:
+            return gain_mat.copy()
+        elif part is "known":
+            return gain_mat[
+                : -self.num_Tx_unknown,
+                : -self.num_Rx_per_Tx_unknown * self.num_Tx_unknown,
+            ]
+        else:
+            return gain_mat[
+                self.num_Tx_known :, self.num_Rx_per_Tx_known * self.num_Tx_known :
+            ]
