@@ -24,6 +24,7 @@ def weighted_minimum_mean_square_error(
     u = np.zeros(Rx_num)
     h = [channel_gain(i) for i in range(Rx_num)]
 
+    powers_list = []
     t = 0
     while t < 5000:
         for i in range(Rx_num):
@@ -62,17 +63,17 @@ def weighted_minimum_mean_square_error(
         p_prev = p
         p = v**2
 
+        new_powers = Rx_powers_mW.copy()
+        for i in range(Rx_num):
+            new_powers[i + Rx_idx_shift] = p[i]
+        powers_list.append(new_powers)
         t += 1
-
-    new_powers = Rx_powers_mW.copy()
-    for i in range(Rx_num):
-        new_powers[i + Rx_idx_shift] = p[i]
 
     print(new_powers)
     print(
-        f"Weighted Sum Rate: {simulator.weighted_sum_rate_Gbps(new_powers, Rx_weights=Rx_weights)}"
+        f"Weighted Sum Rate: {simulator.weighted_sum_rate_Gnats(new_powers, Rx_weights=Rx_weights)}"
     )
     print(f"Round {t}", np.linalg.norm(p - p_prev))
     print(f"\t Power: {new_powers}")
 
-    return p
+    return powers_list

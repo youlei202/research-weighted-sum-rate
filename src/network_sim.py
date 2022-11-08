@@ -215,9 +215,7 @@ class NetworkSimulator(object):
     def get_Tx_uni_index(self, Rx_uni_index):
         return Rx_uni_index // len(self.x_Tx)
 
-    def weighted_sum_rate_Gbps(self, Rx_powers_mW, Rx_weights):
-        """Sum rate on 1 RU"""
-
+    def weighted_sum_rate_Gnats(self, Rx_powers_mW, Rx_weights):
         sinr_list = []
         rate_list = []
         for i in range(len(self.x_Rx)):
@@ -262,3 +260,20 @@ class NetworkSimulator(object):
             return gain_mat[
                 self.num_Tx_known :, self.num_Rx_per_Tx_known * self.num_Tx_known :
             ]
+
+    def Rx_interference(self, Rx_powers_mW):
+
+        interferences = []
+        for i in range(len(self.x_Rx)):
+            signal_and_interference = np.array(
+                [
+                    np.sum(np.take(Rx_powers_mW, self.Rx_of[j]))
+                    for j in range(len(self.x_Tx))
+                ]
+            ).dot(self.gain_mat_mW[:, i])
+            signal = (
+                np.sum(np.take(Rx_powers_mW, self.Rx_of[self.Tx_of[i]]))
+                * self.gain_mat_mW[self.Tx_of[i]][i]
+            )
+            interferences.append(signal_and_interference - signal)
+        return interferences
