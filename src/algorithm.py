@@ -2,7 +2,7 @@ import math
 import numpy as np
 
 
-def weighted_minimum_mean_square_error(
+def wmmse(
     simulator,
     gain_mat_mW,
     Rx_powers_mW,
