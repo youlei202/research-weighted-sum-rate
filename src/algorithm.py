@@ -211,11 +211,11 @@ def stochastic_wmmse(
         # simulator.update_gain_matrix()
         t += 1
 
-    print(f"Denominator: {np.mean(signal_plus_interferences_and_noise_A)}")
-    print(f"Weighted Sum Rate: {np.mean(rate_list)}")
-    print(f"Power: {p}, {p_netB}")
-    print(
-        f"Convergence Error at Round {t}",
-        np.linalg.norm(p - p_prev),
-    )
+    # print(f"Denominator: {np.mean(signal_plus_interferences_and_noise_A)}")
+    # print(f"Weighted Sum Rate: {np.mean(rate_list)}")
+    # print(f"Power: {p}, {p_netB}")
+    # print(
+    #     f"Convergence Error at Round {t}",
+    #     np.linalg.norm(p - p_prev),
+    # )
     return rate_list
