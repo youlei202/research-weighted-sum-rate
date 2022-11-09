@@ -142,7 +142,6 @@ def stochastic_wmmse(
 
     t = 0
     rate_list = []
-    step_interval = 5
     while t < max_iter:
         p_prev = p
         h = [channel_gain(i) for i in range(simulator.num_Rx_netA)]
@@ -179,9 +178,8 @@ def stochastic_wmmse(
                 sc_X_test = pd.DataFrame(signal_and_interferences_A).drop(i, axis=0)[0]
                 synthetic_i = interference_models[i].predict(sc_X_test)
                 result.append(synthetic_i + simulator.noise_mW)
-            if (t + 1) % step_interval == 0:
+            if np.random.rand() <= (1 - t / max_iter) * 0.2:
                 signal_plus_interferences_and_noise_A = result
-                # step_interval = step_interval * 2
             else:
                 signal_plus_interferences_and_noise_A = (
                     np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
