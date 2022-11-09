@@ -278,13 +278,12 @@ class NetworkSimulator(object):
             ]
 
     def Rx_interference(self, Rx_powers_mW, part="full"):
-
         interferences = []
-        for i in range(len(self.x_Rx)):
+        for i in range(self.num_Rx):
             signal_and_interference = np.array(
                 [
                     np.sum(np.take(Rx_powers_mW, self.Rx_of[j]))
-                    for j in range(len(self.x_Tx))
+                    for j in range(self.num_Tx)
                 ]
             ).dot(self.gain_mat_mW[:, i])
             signal = (
@@ -297,6 +296,73 @@ class NetworkSimulator(object):
             return interferences[: self.num_Rx_netA]
         if part == "B":
             return interferences[self.num_Rx_netA :]
+        return interferences
+
+    def Rx_signal_and_interference_AB_to_A(self, Rx_powers_mW, i=None):
+        def compute(i):
+            return np.array(
+                [
+                    np.sum(np.take(Rx_powers_mW, self.Rx_of[j]))
+                    for j in range(self.num_Tx)
+                ]
+            ).dot(self.gain_mat_mW[:, i])
+
+        if i == None:
+            signal_and_interferences = []
+            for i in range(self.num_Rx_netA):
+                signal_and_interferences.append(compute(i))
+            return signal_and_interferences
+        else:
+            return compute(i)
+
+    def Rx_signal_and_interference_A_to_A(self, Rx_powers_mW, i=None):
+        def compute(i):
+            return np.array(
+                [
+                    np.sum(np.take(Rx_powers_mW, self.Rx_of[j]))
+                    for j in range(self.num_Tx_netA)
+                ]
+            ).dot(self.gain_mat_mW[: self.num_Tx_netA, i])
+
+        if i == None:
+            signal_and_interferences = []
+            for i in range(self.num_Rx_netA):
+                signal_and_interferences.append(compute(i))
+            return signal_and_interferences
+        else:
+            return compute(i)
+
+    def Rx_interference_B_to_A(self, Rx_powers_mW, i=None):
+        def compute(i):
+            return np.array(
+                [
+                    np.sum(np.take(Rx_powers_mW, self.Rx_of[j]))
+                    for j in range(self.num_Tx_netA, self.num_Tx)
+                ]
+            ).dot(self.gain_mat_mW[self.num_Tx_netA :, i])
+
+        if i == None:
+            interferences = []
+            for i in range(self.num_Rx_netA):
+                interferences.append(compute(i))
+            return interferences
+        else:
+            return compute(i)
+
+    def Rx_interference_A_to_A(self, Rx_powers_mW):
+        interferences = []
+        for i in range(self.num_Rx_netA):
+            signal_and_interference_A = np.array(
+                [
+                    np.sum(np.take(Rx_powers_mW, self.Rx_of[j]))
+                    for j in range(self.num_Tx_netA)
+                ]
+            ).dot(self.gain_mat_mW[: self.num_Tx_netA, i])
+            signal = (
+                np.sum(np.take(Rx_powers_mW, self.Rx_of[self.Tx_of[i]]))
+                * self.gain_mat_mW[self.Tx_of[i]][i]
+            )
+            interferences.append(signal_and_interference_A - signal)
         return interferences
 
     def abs_Rx_idx_netA(self, rele_Rx_idx):

@@ -1,6 +1,7 @@
 from toolz import partial
 from scipy.optimize import fmin_slsqp
 import numpy as np
+from sklearn.linear_model import LinearRegression
 
 
 class SyntheticControl:
@@ -25,3 +26,15 @@ class SyntheticControl:
 
     def predict(self, X):
         return X.dot(self.coef_)
+
+
+class SyntheticControlUnconstrained:
+    def __init__(self):
+        self.model = LinearRegression()
+
+    def fit(self, X, y):
+        self.model.fit(X, y)
+        return self
+
+    def predict(self, X):
+        return X.dot(self.model.coef_)
