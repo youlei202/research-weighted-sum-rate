@@ -1,7 +1,8 @@
 import math
 import numpy as np
 import pandas as pd
-from src.network_sim import NetworkSimulator
+
+# from src.network_sim import NetworkSimulator
 from src.experiment import train_sc_models
 
 
@@ -72,7 +73,7 @@ def wmmse(
     for i in range(Rx_num):
         p_final[i + Rx_idx_shift] = p[i]
     print(
-        f"Weighted Sum Rate: {simulator.weighted_sum_rate_Gnats(p_final, Rx_weights=Rx_weights)}",
+        f"Weighted Sum Rate: {simulator.weighted_sum_rate_Gnats(p_final, Rx_weights=Rx_weights, part='A')}",
         f"Convergence Error at Round {t}",
         np.linalg.norm(p - p_prev),
     )
@@ -141,7 +142,7 @@ def stochastic_wmmse(
 
     t = 0
     rate_list = []
-    observed_signal_and_interferences_list = []
+    step_interval = 5
     while t < max_iter:
         p_prev = p
         h = [channel_gain(i) for i in range(simulator.num_Rx_netA)]
@@ -150,7 +151,7 @@ def stochastic_wmmse(
         if netB_power_mode == "dependent":
             p_netB = power_corr_mat.dot(p).clip(min=0, max=Rx_max_powers_mW)
         elif netB_power_mode == "zero":
-            p_netB = [0.00001 for i in range(simulator.num_Rx_netB)]
+            p_netB = [1e-20 for i in range(simulator.num_Rx_netB)]
         elif netB_power_mode == "random":
             p_netB = np.random.uniform(0, Rx_max_powers_mW, simulator.num_Rx_netB)
         elif netB_power_mode == "uniform":
@@ -170,24 +171,21 @@ def stochastic_wmmse(
                 + simulator.noise_mW
             )
         elif interference_mode == "sc_estimate":
-            observed_signal_and_interference = (
-                simulator.Rx_signal_and_interference_AB_to_A(p_netAB)
-            )
-            observed_signal_and_interferences_list.append(
-                observed_signal_and_interference
-            )
-            interference_models = train_sc_models(
-                observed_signal_and_interferences_list[-20:], constrained=True
-            )
             signal_and_interferences_A = simulator.Rx_signal_and_interference_AB_to_A(
                 p_netAB
             )
-            signal_plus_interferences_and_noise_A = []
+            result = []
             for i in range(simulator.num_Rx_netA):
                 sc_X_test = pd.DataFrame(signal_and_interferences_A).drop(i, axis=0)[0]
                 synthetic_i = interference_models[i].predict(sc_X_test)
-                signal_plus_interferences_and_noise_A.append(
-                    synthetic_i + simulator.noise_mW
+                result.append(synthetic_i + simulator.noise_mW)
+            if (t + 1) % step_interval == 0:
+                signal_plus_interferences_and_noise_A = result
+                # step_interval = step_interval * 2
+            else:
+                signal_plus_interferences_and_noise_A = (
+                    np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
+                    + simulator.noise_mW
                 )
         elif interference_mode == "lr_estimate":
             signal_plus_interferences_and_noise_A = [
@@ -207,10 +205,10 @@ def stochastic_wmmse(
             signal_plus_interferences_and_noise_A=signal_plus_interferences_and_noise_A,
         )
         rate = simulator.weighted_sum_rate_Gnats(
-            np.append(p, p_netB), Rx_weights=Rx_weights
+            np.append(p, p_netB), Rx_weights=Rx_weights, part="A"
         )
         rate_list.append(rate)
-        simulator.update_gain_matrix()
+        # simulator.update_gain_matrix()
         t += 1
 
     print(f"Denominator: {np.mean(signal_plus_interferences_and_noise_A)}")

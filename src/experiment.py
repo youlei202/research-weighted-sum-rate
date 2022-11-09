@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from src.sc import SyntheticControl, SyntheticControlUnconstrained
 from sklearn.linear_model import LinearRegression
-from src.algorithm import wmmse
 
 
 def train_lr_models(powers_list, observed_signal_and_interferences_list):
@@ -78,7 +77,7 @@ class ExperimentInterferenceModelComparison(Experiment):
             powers_list_netA.append(power_netA)
 
         for t, p_netA in enumerate(powers_list_netA):
-            self.simulator.update_gain_matrix()
+            # self.simulator.update_gain_matrix()
             if netB_power_mode == "dependent":
                 p_netB = self.power_corr_mat.dot(p_netA).clip(min=0, max=max_power)
             elif netB_power_mode == "random":

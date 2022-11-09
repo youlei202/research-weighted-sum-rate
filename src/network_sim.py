@@ -247,12 +247,12 @@ class NetworkSimulator(object):
         spectral_efficiency = 1.4426950408889 * 20 / 1e9  # Gnats / Hz
         scaler = self.bandwidth_Hz * spectral_efficiency
 
-        result = np.array(Rx_weights).dot(np.array(rate_list)) * scaler
+        result = np.array(Rx_weights) * (np.array(rate_list)) * scaler
         if part == "A":
-            return result[: self.num_Rx_netA]
+            return np.sum(result[: self.num_Rx_netA])
         if part == "B":
-            return result[self.num_Rx_netA :]
-        return result
+            return np.sum(result[self.num_Rx_netA :])
+        return np.sum(result)
 
     def get_gain_mat(
         self,
