@@ -199,7 +199,7 @@ def stochastic_wmmse(
             np.append(p, p_netB), Rx_weights=Rx_weights
         )
         rate_list.append(rate)
-        # simulator.update_gain_matrix()
+        simulator.update_gain_matrix()
         t += 1
 
     print(f"Denominator: {np.mean(signal_plus_interferences_and_noise_A)}")

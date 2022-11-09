@@ -60,7 +60,6 @@ class Experiment(metaclass=ABCMeta):
 class ExperimentInterferenceModelComparison(Experiment):
     def __init__(self, simulator):
         super().__init__(simulator)
-        self.gain_netA = simulator.get_gain_mat(part="A", unit="mW")
 
     def data_generation(self, num_samples, max_power, netB_power_mode="dependent"):
         self.power_corr_mat = np.random.uniform(
@@ -79,6 +78,7 @@ class ExperimentInterferenceModelComparison(Experiment):
             powers_list_netA.append(power_netA)
 
         for t, p_netA in enumerate(powers_list_netA):
+            self.simulator.update_gain_matrix()
             if netB_power_mode == "dependent":
                 p_netB = self.power_corr_mat.dot(p_netA).clip(min=0, max=max_power)
             elif netB_power_mode == "random":
