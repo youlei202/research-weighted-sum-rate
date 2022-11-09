@@ -2,6 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 from src.network_sim import NetworkSimulator
+from src.experiment import train_sc_models
 
 
 def wmmse_iteration(simulator, h, u, w, p, p_max, alpha, Tx_idx_shift, Rx_idx_shift):
@@ -140,6 +141,7 @@ def stochastic_wmmse(
 
     t = 0
     rate_list = []
+    observed_signal_and_interferences_list = []
     while t < max_iter:
         p_prev = p
         h = [channel_gain(i) for i in range(simulator.num_Rx_netA)]
@@ -168,6 +170,15 @@ def stochastic_wmmse(
                 + simulator.noise_mW
             )
         elif interference_mode == "sc_estimate":
+            observed_signal_and_interference = (
+                simulator.Rx_signal_and_interference_AB_to_A(p_netAB)
+            )
+            observed_signal_and_interferences_list.append(
+                observed_signal_and_interference
+            )
+            interference_models = train_sc_models(
+                observed_signal_and_interferences_list[-20:], constrained=True
+            )
             signal_and_interferences_A = simulator.Rx_signal_and_interference_AB_to_A(
                 p_netAB
             )
