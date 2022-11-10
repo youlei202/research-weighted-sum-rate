@@ -178,8 +178,12 @@ def stochastic_wmmse(
                 sc_X_test = pd.DataFrame(signal_and_interferences_A).drop(i, axis=0)[0]
                 synthetic_i = interference_models[i].predict(sc_X_test)
                 result.append(synthetic_i + simulator.noise_mW)
-            if np.random.rand() <= (1 - t / max_iter) * 0.2:
-                signal_plus_interferences_and_noise_A = result
+            if np.random.rand() <= ((1 - t / max_iter) * 0.2) ** 2:
+                sin_A = (
+                    np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
+                    + simulator.noise_mW
+                )
+                signal_plus_interferences_and_noise_A = np.array(result) * 1 + 0 * sin_A
             else:
                 signal_plus_interferences_and_noise_A = (
                     np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
@@ -209,11 +213,4 @@ def stochastic_wmmse(
         # simulator.update_gain_matrix()
         t += 1
 
-    # print(f"Denominator: {np.mean(signal_plus_interferences_and_noise_A)}")
-    # print(f"Weighted Sum Rate: {np.mean(rate_list)}")
-    # print(f"Power: {p}, {p_netB}")
-    # print(
-    #     f"Convergence Error at Round {t}",
-    #     np.linalg.norm(p - p_prev),
-    # )
     return rate_list
