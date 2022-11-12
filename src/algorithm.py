@@ -120,6 +120,7 @@ def stochastic_wmmse(
     netB_power_mode=None,
     power_corr_mat=None,
     max_iter=5000,
+    sc_mode="sc",
 ):
     def channel_gain(i):
         k = simulator.Tx_of[i]
@@ -175,15 +176,26 @@ def stochastic_wmmse(
             )
             result = []
             for i in range(simulator.num_Rx_netA):
-                sc_X_test = pd.DataFrame(signal_and_interferences_A).drop(i, axis=0)[0]
-                synthetic_i = interference_models[i].predict(sc_X_test)
+                if sc_mode == "random":
+                    synthetic_i = np.mean(
+                        np.random.dirichlet(np.ones(simulator.num_Rx_netA - 1))
+                        * pd.DataFrame(signal_and_interferences_A).drop(i, axis=0)[0]
+                    )
+                elif sc_mode == "center":
+                    synthetic_i = (
+                        pd.DataFrame(signal_and_interferences_A)
+                        .drop(i, axis=0)[0]
+                        .mean()
+                    )
+                else:
+                    sc_X_test = pd.DataFrame(signal_and_interferences_A).drop(
+                        i, axis=0
+                    )[0]
+                    synthetic_i = interference_models[i].predict(sc_X_test)
                 result.append(synthetic_i + simulator.noise_mW)
+
             if np.random.rand() <= ((1 - t / max_iter) * 0.2) ** 2:
-                sin_A = (
-                    np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
-                    + simulator.noise_mW
-                )
-                signal_plus_interferences_and_noise_A = np.array(result) * 1 + 0 * sin_A
+                signal_plus_interferences_and_noise_A = np.array(result)
             else:
                 signal_plus_interferences_and_noise_A = (
                     np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))

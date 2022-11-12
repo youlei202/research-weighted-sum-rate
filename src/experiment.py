@@ -102,6 +102,10 @@ class ExperimentInterferenceModelComparison(Experiment):
             observed_signal_and_interferences_list=self.observed_signal_and_interferences_list,
             constrained=synthetic_constrained,
         )
+        self.sc_models_unconstrained = train_sc_models(
+            observed_signal_and_interferences_list=self.observed_signal_and_interferences_list,
+            constrained=False,
+        )
 
     def run(self, num_rounds, netA_power_mode="wmmse", netB_power_mode="zero"):
 
