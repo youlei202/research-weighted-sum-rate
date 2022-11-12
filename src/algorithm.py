@@ -178,22 +178,28 @@ def stochastic_wmmse(
                 sc_X_test = pd.DataFrame(signal_and_interferences_A).drop(i, axis=0)[0]
                 synthetic_i = interference_models[i].predict(sc_X_test)
                 result.append(synthetic_i + simulator.noise_mW)
-            if np.random.rand() <= ((1 - t / max_iter) * 0.2) ** 2:
+            if np.random.rand() <= var_epsilon(t=t, t_max=max_iter):
                 sin_A = (
                     np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
                     + simulator.noise_mW
                 )
-                signal_plus_interferences_and_noise_A = np.array(result) * 1 + 0 * sin_A
+                signal_plus_interferences_and_noise_A = np.array(result)
             else:
                 signal_plus_interferences_and_noise_A = (
                     np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
                     + simulator.noise_mW
                 )
         elif interference_mode == "lr_estimate":
-            signal_plus_interferences_and_noise_A = [
-                interference_models[i].predict([p]) + simulator.noise_mW
-                for i in range(simulator.num_Rx_netA)
-            ]
+            if np.random.rand() <= var_epsilon(t=t, t_max=max_iter):
+                signal_plus_interferences_and_noise_A = [
+                    interference_models[i].predict([p]) + simulator.noise_mW
+                    for i in range(simulator.num_Rx_netA)
+                ]
+            else:
+                signal_plus_interferences_and_noise_A = (
+                    np.array(simulator.Rx_signal_and_interference_AB_to_A(p_netAB))
+                    + simulator.noise_mW
+                )
         p, u, w, a, b = stochastic_wmmse_iteration(
             simulator,
             h=h,
@@ -210,7 +216,11 @@ def stochastic_wmmse(
             np.append(p, p_netB), Rx_weights=Rx_weights, part="A"
         )
         rate_list.append(rate)
-        # simulator.update_gain_matrix()
+
         t += 1
 
     return rate_list
+
+
+def var_epsilon(t, t_max):
+    return ((1 - t / t_max) * 0.2) ** 2
