@@ -64,6 +64,12 @@ class ExperimentInterferenceModelComparison(Experiment):
         self.power_corr_mat = np.random.uniform(
             -1, 1, (self.simulator.num_Rx_netB, self.simulator.num_Rx_netA)
         )
+        self.power_corr_mat_test = np.random.uniform(
+            -1, 1, (self.simulator.num_Rx_netB, self.simulator.num_Rx_netA)
+        )
+        # self.power_corr_mat_test = np.random.normal(
+        #     0, 0.5, (self.simulator.num_Rx_netB, self.simulator.num_Rx_netA)
+        # )
 
         self.observed_signal_and_interferences_list = []
         self.powers_list = []
@@ -117,15 +123,6 @@ class ExperimentInterferenceModelComparison(Experiment):
                     Rx_weights=np.ones(self.simulator.num_Rx),
                     max_iter=5000,
                 )
-
-        # self.power_corr_mat = np.random.uniform(
-        #     -10,
-        #     10,
-        #     (
-        #         self.simulator.num_Tx_netB * self.simulator.num_Rx_per_Tx_netB,
-        #         self.simulator.num_Tx_netA * self.simulator.num_Rx_per_Tx_netA,
-        #     ),
-        # )
 
         real_interf = []
         sc_interf = []
