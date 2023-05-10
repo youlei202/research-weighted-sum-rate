@@ -92,11 +92,12 @@ class ExperimentInterferenceModelComparison(Experiment):
                 p_netB = [0.00001 for i in range(self.simulator.num_Rx_netB)]
             p = np.append(p_netA, p_netB)
             self.powers_list.append(p)
-            observed_signal_and_interference = (
-                self.simulator.Rx_signal_and_interference_AB_to_A(p)
-            )
+            observed_signal_and_interference_noise = (
+                np.array(self.simulator.Rx_signal_and_interference_AB_to_A(p))
+                + self.simulator.noise_mW
+            ) / np.sqrt(p_netA)
             self.observed_signal_and_interferences_list.append(
-                observed_signal_and_interference
+                observed_signal_and_interference_noise
             )
 
     def modeling(self, synthetic_constrained=True):
